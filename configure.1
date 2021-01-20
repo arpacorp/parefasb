@@ -8,6 +8,67 @@ PAREF App Server Builder is a script to automate the PAREF SMS server build proc
 .SH OPTIONS
 ./configure
 
+.The configuaration option are as follows.
+
+.[MISC_SETTINGS].
+
+.EMAIL = Defines the email address of the server administrator.
+
+.XIND = Defines the default index file for the web server.
+
+.XINF = Defines the default phpinfo for the server.
+
+.XHST = Defines the /etc/hosts file.
+
+.XFST = Defines the /etc/fstab entry.
+
+.BASEPATH = Defines the base path /etc/parefconfigure.
+
+.APACHEDIR = Defines the /etc/apache2 directory.
+
+.PHPDIR = Defines the /etc/php/5.6/apache2 directory.
+
+.LOGFILE = Defines the configure.log.
+
+.WEBROOT = Defines the default DocumentRoot.
+
+.TMPDIR = Defines the /tmp file location.
+
+.[BASE_PACKAGES].
+
+.BASEPKGS_U = Defines the Ubuntu packages separated by a pipe |.
+
+.DMODULE_U = Defines the Apache modules to be disabled by defaul.
+
+.EMODULE_U = Defines the Apache modules to be enabled.
+
+.BASEPKGS_C = Defines the RHEL/CentOS packages separated by a pipe |.
+
+.[CUSTOM_CONFIG].
+
+.CUSTOM_WELCOME = Defines the question file for 000.txt.
+
+.CUSTOM_EXIST = Defines the question file for 001.txt.
+
+.CUSTOM_EXISTSTORE = Defines the question file for 001.1.txt.
+
+.CUSTOM_SERVERNAME = Defines the question file for 002.txt.
+
+.CUSTOM_HTTPSPORT = Defines the question file for 003.txt.
+
+.CUSTOM_SERVERTOKENS = Defines the question file for 004.txt.
+
+.CUSTOM_SERVERSIGNATURE = Defines the question file for 005.txt.
+
+.CUSTOM_CERTBOT = Defines the question file for 006.txt.
+
+.CUSTOM_SECURITY = Defines the question file for 007.txt.
+
+.CUSTOM_DISABLEHTTP = Defines the question file for 008.txt.
+
+.CUSTOM_MAXUPLOADSIZE = Defines the question file for 009.txt.
+
+.CUSTOM_CONFIRM = Defines the question file for 010.txt.
 
 .SH SEE ALSO
 configure(1), configure.conf(2)
