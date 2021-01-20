@@ -17,10 +17,10 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 ## START GENERAL SETTINGS ##
-source /usr/local/bin/gencfvar.sh
+BINPT=/usr/local/bin
 TZONE=Asia/Manila
 HEADER="`sed -n '2p' $0` - `date`"
-DATE=$(date '+%Y%m%d-%H%M')
+DATE=$(date '+%Y%m%d-%H%M%S')
 UTFC="\xE2\x88\x9A"
 UTFY="\xE2\x9D\xA4"
 UTFX="\xE2\x9C\x9D"
@@ -34,63 +34,77 @@ function disp_errr(){ printf "\x1B[01;31m[$UTFX]\x1B[0m $1"; }
 function disp_noti(){ printf "\x1B[01;33m[$UTFY]\x1B[0m $1"; }
 function errr_exit()
 {
-	disp_errr "${PROGNAME}: ${1:-"Unknown Error"}\n" 1>&2
-	exit 1
+        disp_errr "${PROGNAME}: ${1:-"Unknown Error"}\n" 1>&2
+        exit 1
 }
 
-# Install all necessary modules, binaries from apt
+clear
+printf "$X$HEADER$Y\n";
 
-touch $LOGFILE;
-
-if [[ -f /usr/share/man/man8/afw.8.gz ]]; then
-	disp_good "$DATE - Man page found.\n";
+# Install man pages
+if [[ -f /usr/share/man/man8/configure.8.gz ]]; then
+        disp_good "$DATE - Man page found.\n";
 else
-	disp_good "$DATE - Installing man pages...\n";
-	cp -fp `pwd`/configure.1 /usr/share/man/man8/configure.8
-	gzip /usr/share/man/man8/configure.8
+        disp_good "$DATE - Installing man pages...\n";
+        cp -fp `pwd`/configure.1 /usr/share/man/man8/configure.8
+        gzip /usr/share/man/man8/configure.8
 fi
 
+# Setup symlinks
+if [[ -f $BINPT/configure ]]; then
+        disp_good "$DATE - Symlink found $BINPT/configure.\n";
+else
+        disp_good "$DATE - Creating symlink...\n";
+                ln -s `pwd`/configure $BINPT/configure
+                ln -s $BINPT/configure /bin/configure
+                ln -s `pwd`/gencfvar.sh $BINPT/gencfvar.sh
+                ln -sr `pwd`/parefconfigure /etc/parefconfigure
+fi
+
+# Define source
+source $BINPT/gencfvar.sh
+touch $LOGFILE;
+
 function check_binaries(){
-printf "$X$HEADER$Y\n";
-printf "Checking binaries...\n";
+disp_good "$DATE - Checking binaries...\n" | tee -a $LOGFILE;
     if [[ -f "/etc/lsb-release" ]]; then
-	echo "$DATE - Running OS: `cat /etc/lsb-release | grep DESC | cut -d= -f2`" | tee -a $LOGFILE;
+        disp_good "$DATE - Running OS: `cat /etc/lsb-release | grep DESC | cut -d= -f2`\n" | tee -a $LOGFILE;
 
-	BUILD_DEPS="software-properties-common" && dpkg-reconfigure locales
-	apt-get install --no-install-recommends -y $BUILD_DEPS
-	add-apt-repository -y ppa:ondrej/php && apt-get update -y
-	apt-get -y update && apt-get -y upgrade
+        BUILD_DEPS="software-properties-common" && dpkg-reconfigure locales
+        apt-get install --no-install-recommends -y $BUILD_DEPS
+        add-apt-repository -y ppa:ondrej/php && apt-get update -y
+        apt-get -y update && apt-get -y upgrade
 
-	BASEPKGS="`echo "$BASEPKGS_U" | sed 's/|/ /g'`"
-	for i in $BASEPKGS iptables ipset 
-	{ 
-		disp_stat "Checking ${i}... "
-		if [ ! -x "$(which $i)" ]; then
-			printf "\033[1mNot found.\033[0m\n"; sleep 1
-			disp_stat "$DATE - Installing packages... {\033[1m$i\033[0m}\n" | tee -a $LOGFILE;
-    			apt-get install -y ${i}
-		if [ $? -eq 0 ]; then
-			disp_good "$DATE - Packages successfully installed.\n" | tee -a $LOGFILE;
- 	    	else
- 			disp_errr "$DATE - Packages failed to install!\n" | tee -a $LOGFILE;
-  			exit 1
- 		fi
-			else
-		disp_stat "$DATE - ${i} Okay.\n" | tee -a $LOGFILE;
-		apt autoremove -y
-		fi
-	}
+        BASEPKGS="`echo "$BASEPKGS_U" | sed 's/|/ /g'`"
+        for i in $BASEPKGS iptables ipset
+        {
+                disp_stat "$DATE - Checking ${i}...\n" | tee -a $LOGFILE;
+                if [ ! -x "$(which $i)" ]; then
+                        printf "\033[1mNot found.\033[0m\n"; sleep 1
+                        disp_stat "$DATE - Installing packages... {\033[1m$i\033[0m}\n" | tee -a $LOGFILE;
+                        apt-get install -y ${i}
+                if [ $? -eq 0 ]; then
+                        disp_good "$DATE - Packages successfully installed.\n" | tee -a $LOGFILE;
+                else
+                        disp_errr "$DATE - Packages failed to install!\n" | tee -a $LOGFILE;
+                        exit 1
+                fi
+                        else
+                disp_stat "$DATE - ${i} Okay.\n" | tee -a $LOGFILE;
+                apt autoremove -y
+                fi
+        }
 
 elif [[ -f "/etc/redhat-release" ]]; then
-	echo "$DATE - Running OS: `cat /etc/redhat-release`" | tee -a $LOGFILE;
-	yum -y update && yum -y upgrade
+        disp_good "$DATE - Running OS: `cat /etc/redhat-release`\n" | tee -a $LOGFILE;
+        yum -y update && yum -y upgrade
 
-	BASEPKGS="`echo "$BASEPKGS_C" | sed 's/|/ /g'`"
-	for i in $BASEPKGS iptables ipset
+        BASEPKGS="`echo "$BASEPKGS_C" | sed 's/|/ /g'`"
+        for i in $BASEPKGS iptables ipset
         {
-                disp_stat "Checking ${i}...\n" | tee -a $LOGFILE;
+                disp_stat "$DATE - Checking ${i}...\n" | tee -a $LOGFILE;
                 if [ ! -x "$(which $i)" ]; then
-			printf "\033[1mNot found.\033[0m\n"; sleep 1
+                        printf "\033[1mNot found.\033[0m\n"; sleep 1
                         disp_stat "$DATE - Installing package... {\033[1m$i\033[0m}\n" | tee -a $LOGFILE;
                         yum -y install ${i}
                 if [ $? -eq 0 ]; then
@@ -104,52 +118,52 @@ elif [[ -f "/etc/redhat-release" ]]; then
                 fi
         }
 else
-	disp_errr "$DATE - Non-supported operating system.\n" | tee -a $LOGFILE;
+        disp_errr "$DATE - Non-supported operating system.\n" | tee -a $LOGFILE;
 fi
 }
 
 function check_modules(){
-	DBASEMOD="`echo "$DMODULE_U" | sed 's/|/ /g'`"
-	disp_stat "Disabling modules... {\033[1m$DBASEMOD\033[0m}\n" | tee -a $LOGFILE;
-		a2dismod --force $DBASEMOD
+        DBASEMOD="`echo "$DMODULE_U" | sed 's/|/ /g'`"
+        disp_stat "$DATE - Disabling modules... {\033[1m$DBASEMOD\033[0m}\n" | tee -a $LOGFILE;
+                a2dismod --force $DBASEMOD
 
-	EBASEMOD="`echo "$EMODULE_U" | sed 's/|/ /g'`"
-	disp_stat "Enabling modules... {\033[1m$EBASEMOD\033[0m}\n" | tee -a $LOGFILE;
-		a2enmod $EBASEMOD
+        EBASEMOD="`echo "$EMODULE_U" | sed 's/|/ /g'`"
+        disp_stat "$DATE - Enabling modules... {\033[1m$EBASEMOD\033[0m}\n" | tee -a $LOGFILE;
+                a2enmod $EBASEMOD
 
-	if [[ ! -d "$WEBROOT" ]]; then
-		disp_errr "DocumentRoot $WEBROOT does not exist, creating..." | tee -a $LOGFILE;
-			mkdir -p $WEBROOT;
-	else
-        	disp_stat "Creating default Index...\n" | tee -a $LOGFILE; sleep 3
-                	echo "" > $WEBROOT/$XIND
-	        disp_stat "Creating xinfx.php...\n" | tee -a $LOGFILE;
-                	echo "<?php phpinfo(); ?>" > $WEBROOT/$XINF;sleep 3
-        	disp_stat "Restarting Apache2...\n" | tee -a $LOGFILE;
-        		/usr/bin/systemctl restart apache2
-	fi
-		disp_good "Loading module completed.\n" | tee -a $LOGFILE;
+        if [[ ! -d "$WEBROOT" ]]; then
+                disp_errr "$DATE - DocumentRoot $WEBROOT does not exist, creating..." | tee -a $LOGFILE;
+                        mkdir -p $WEBROOT;
+        else
+                disp_stat "$DATE - Creating default Index...\n" | tee -a $LOGFILE; sleep 3
+                        echo "" > $WEBROOT/$XIND
+                disp_stat "$DATE - Creating xinfx.php...\n" | tee -a $LOGFILE;
+                        echo "<?php phpinfo(); ?>" > $WEBROOT/$XINF;sleep 3
+                disp_stat "$DATE - Restarting Apache2...\n" | tee -a $LOGFILE;
+                        /usr/bin/systemctl restart apache2
+        fi
+                disp_good "$DATE - Loading module completed.\n" | tee -a $LOGFILE;
 }
 
 function load_misc(){
-	disp_stat "$DATE - Setting Timezone...\n" | tee -a $LOGFILE; sleep 3
-		timedatectl set-timezone $TZONE
-	disp_good "$DATE - Timezone changed.\n" | tee -a $LOGFILE;
+        disp_stat "$DATE - Setting Timezone...\n" | tee -a $LOGFILE; sleep 3
+                timedatectl set-timezone $TZONE
+        disp_good "$DATE - Timezone changed.\n" | tee -a $LOGFILE;
 
-	disp_stat "$DATE - Loading /etc/hosts...\n" | tee -a $LOGFILE; sleep 3
-		cat $XHST | grep -A 8 "True" > $TMPDIR/hosts
-			echo "10.104.0.2 gfsv.x.paref.edu.ph glusterx" >> $TMPDIR/hosts
-			echo "10.104.0.3 gfsv.y.paref.edu.ph glustery" >> $TMPDIR/hosts
-			echo "10.104.0.6 dbsv.paref.edu.ph dbsv" >> $TMPDIR/hosts
-		cp $TMPDIR/hosts $XHST
-	disp_good "$DATE - /etc/hosts changes completed.\n" | tee -a $LOGFILE;
+        disp_stat "$DATE - Loading /etc/hosts...\n" | tee -a $LOGFILE; sleep 3
+                cat $XHST | grep -A 8 "True" > $TMPDIR/hosts
+                        echo "10.104.0.2 gfsv.x.paref.edu.ph glusterx" >> $TMPDIR/hosts
+                        echo "10.104.0.3 gfsv.y.paref.edu.ph glustery" >> $TMPDIR/hosts
+                        echo "10.104.0.6 dbsv.paref.edu.ph dbsv" >> $TMPDIR/hosts
+                cp $TMPDIR/hosts $XHST
+        disp_good "$DATE - /etc/hosts changes completed.\n" | tee -a $LOGFILE;
 
-	disp_stat "$DATE - Adding GFS connectivity...\n" | tee -a $LOGFILE; sleep 3
-		echo "LABEL=cloudimg-rootfs   /        ext4   defaults        0 0" > $XFST
-		echo "LABEL=UEFI      /boot/efi       vfat    defaults        0 0" >> $XFST
-		echo "glusterx:volgfs /storage glusterfs defaults,_netdev,backupvolfile-server=glustery 0 0" >> $XFST
-		mount -t glusterfs glusterx:volgfs /storage
-	disp_good "$DATE - GFS volume connected.\n" | tee -a $LOGFILE;
+        disp_stat "$DATE - Adding GFS connectivity...\n" | tee -a $LOGFILE; sleep 3
+                echo "LABEL=cloudimg-rootfs   /        ext4   defaults        0 0" > $XFST
+                echo "LABEL=UEFI      /boot/efi       vfat    defaults        0 0" >> $XFST
+                echo "glusterx:volgfs /storage glusterfs defaults,_netdev,backupvolfile-server=glustery 0 0" >> $XFST
+                mount -t glusterfs glusterx:volgfs /storage
+        disp_good "$DATE - GFS volume connected.\n" | tee -a $LOGFILE;
 
 }
 
@@ -159,130 +173,131 @@ clear
 
 # PRIMARY SETTINGS
 dialog --title " ARPACORP - PAREF App Builder " \
-	--backtitle "Copyright. Arpacorp. 2021. https://arpa.ph" \
-	--yesno "`cat $CUSTOM_WELCOME` Would you like to continue?\n" 19 80 && {
-	echo "1" > $TMPDIR/x0.tmp
+        --backtitle "Copyright. Arpacorp. 2021. https://arpa.ph" \
+        --yesno "`cat $CUSTOM_WELCOME` Would you like to continue?\n" 19 80 && {
+        echo "1" > $TMPDIR/x0.tmp
 
-        	# 01 NEW OR EXISTING
-        	dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_EXIST`" 10 80 && {
-        	echo "1" > $TMPDIR/x1.tmp
+                # 01 NEW OR EXISTING
+                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_EXIST`" 10 80 && {
+                echo "1" > $TMPDIR/x1.tmp
 
-	        # 01 OLD SERVER
-	        STOREPATH=$(dialog --title " SERVER CONFIGURATION " \
-        	        --inputbox "`cat $CUSTOM_EXISTSTORE`" 12 80 3>&1 1>&2 2>&3 3>&-)
-	        echo "$STOREPATH" > $TMPDIR/x1.1.tmp
+                # 01 OLD SERVER
+                STOREPATH=$(dialog --title " SERVER CONFIGURATION " \
+                        --inputbox "`cat $CUSTOM_EXISTSTORE`" 12 80 3>&1 1>&2 2>&3 3>&-)
+                echo "$STOREPATH" > $TMPDIR/x1.1.tmp
 
-		# EXIT AFTER PROCESSING
-		exit 0
+                # EXIT AFTER PROCESSING
+                exit 0
 
-	# Process as new server if no existing /storage config.
+        # Process as new server if no existing /storage config.
         } || {
-        	echo "0" > $TMPDIR/x1.tmp
-		# 02 SERVER NAME
-		SERVERNAME=$(dialog --title " SERVER CONFIGURATION " \
-		--inputbox "`cat $CUSTOM_SERVERNAME`" 17 80 3>&1 1>&2 2>&3 3>&-)
-		echo "$SERVERNAME" > $TMPDIR/x2.tmp
+                echo "0" > $TMPDIR/x1.tmp
+                # 02 SERVER NAME
+                SERVERNAME=$(dialog --title " SERVER CONFIGURATION " \
+                --inputbox "`cat $CUSTOM_SERVERNAME`" 17 80 3>&1 1>&2 2>&3 3>&-)
+                echo "$SERVERNAME" > $TMPDIR/x2.tmp
 
-		# 03 SERVER PORT
-		HTTPSPORT=$(dialog --title " SERVER CONFIGURATION " \
-                	--inputbox "`cat $CUSTOM_HTTPSPORT`" 12 80 3>&1 1>&2 2>&3 3>&-)
-	        echo "$HTTPSPORT" > $TMPDIR/x3.tmp
+                # 03 SERVER PORT
+                HTTPSPORT=$(dialog --title " SERVER CONFIGURATION " \
+                        --inputbox "`cat $CUSTOM_HTTPSPORT`" 12 80 3>&1 1>&2 2>&3 3>&-)
+                echo "$HTTPSPORT" > $TMPDIR/x3.tmp
 
-        	# 04 SERVER TOKEN
-	        dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_SERVERTOKENS`" 7 80 && {
-        	echo "Prod" > $TMPDIR/x4.tmp
-		} || {
-		echo "OS" > $TMPDIR/x4.tmp
-		}
+                # 04 SERVER TOKEN
+                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_SERVERTOKENS`" 7 80 && {
+                echo "Prod" > $TMPDIR/x4.tmp
+                } || {
+                echo "OS" > $TMPDIR/x4.tmp
+                }
 
-        	# 05 SERVER SIGNATURE
-	        dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_SERVERSIGNATURE`" 7 80 && {
-	        echo "Off" > $TMPDIR/x5.tmp
-	        } || {
-	        echo "On" > $TMPDIR/x5.tmp
-	        }
+                # 05 SERVER SIGNATURE
+                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_SERVERSIGNATURE`" 7 80 && {
+                echo "Off" > $TMPDIR/x5.tmp
+                } || {
+                echo "On" > $TMPDIR/x5.tmp
+                }
 
-		# 06 CONFIGURE LET'S ENCRYPT
-	        dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_CERTBOT`" 8 80 && {
-	        echo "Yes" > $TMPDIR/x6.tmp
-	        } || {
-	        echo "No" > $TMPDIR/x6.tmp
-		}
+                # 06 CONFIGURE LET'S ENCRYPT
+                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_CERTBOT`" 8 80 && {
+                echo "Yes" > $TMPDIR/x6.tmp
+                } || {
+                echo "No" > $TMPDIR/x6.tmp
+                }
 
-	        # 07 APPLY APACHE SECURITY SETTINGS
-	        dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_SECURITY`" 12 80 && 
-	        echo "Yes" > $TMPDIR/x7.tmp
-	        } || {
-	        echo "No" > $TMPDIR/x7.tmp
-	        }
+                # 07 APPLY APACHE SECURITY SETTINGS
+                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_SECURITY`" 12 80 &&
+                echo "Yes" > $TMPDIR/x7.tmp
+                } || {
+                echo "No" > $TMPDIR/x7.tmp
+                }
 
-	        # 08 APPLY DISABLE HTTP PORT
-	        dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_DISABLEHTTP`" 12 80 && {
-	        echo "Yes" > $TMPDIR/x8.tmp
-	        } || {
-	        echo "No" > $TMPDIR/x8.tmp
-	        }
+                # 08 APPLY DISABLE HTTP PORT
+                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_DISABLEHTTP`" 12 80 && {
+                echo "Yes" > $TMPDIR/x8.tmp
+                } || {
+                echo "No" > $TMPDIR/x8.tmp
+                }
 
-	        # 09 CONFIGURE PHP
-	        MAXSIZE=$(dialog --title " SERVER CONFIGURATION " \
-	                --inputbox "`cat $CUSTOM_MAXUPLOADSIZE`" 12 80 3>&1 1>&2 2>&3 3>&-)
-	        echo "$MAXSIZE" > $TMPDIR/x9.tmp
+                # 09 CONFIGURE PHP
+                MAXSIZE=$(dialog --title " SERVER CONFIGURATION " \
+                        --inputbox "`cat $CUSTOM_MAXUPLOADSIZE`" 12 80 3>&1 1>&2 2>&3 3>&-)
+                echo "$MAXSIZE" > $TMPDIR/x9.tmp
 
-	        # 10 CONFIRM AND APPLY CUSTOMIZATION
-		echo "ServerName: `cat $TMPDIR/x2.tmp` \n" > $TMPDIR/build.tmp
-		echo "ServerPort: `cat $TMPDIR/x3.tmp` \n" >> $TMPDIR/build.tmp
-		echo "ServerTokens: `cat $TMPDIR/x4.tmp` \n" >> $TMPDIR/build.tmp
-		echo "ServerSignature: `cat $TMPDIR/x5.tmp` \n" >> $TMPDIR/build.tmp
-		echo "Generate TLS Certificate: `cat $TMPDIR/x6.tmp` \n" >> $TMPDIR/build.tmp
-		echo "Enable Apache Security: `cat $TMPDIR/x7.tmp` \n" >> $TMPDIR/build.tmp
-		echo "Disable HTTP Port: `cat $TMPDIR/x8.tmp` \n" >> $TMPDIR/build.tmp
-		echo "PHP Max Upload Size: `cat $TMPDIR/x9.tmp` \n" >> $TMPDIR/build.tmp
+                # 10 CONFIRM AND APPLY CUSTOMIZATION
+                echo "ServerName: `cat $TMPDIR/x2.tmp` \n" > $TMPDIR/build.tmp
+                echo "ServerPort: `cat $TMPDIR/x3.tmp` \n" >> $TMPDIR/build.tmp
+                echo "ServerTokens: `cat $TMPDIR/x4.tmp` \n" >> $TMPDIR/build.tmp
+                echo "ServerSignature: `cat $TMPDIR/x5.tmp` \n" >> $TMPDIR/build.tmp
+                echo "Generate TLS Certificate: `cat $TMPDIR/x6.tmp` \n" >> $TMPDIR/build.tmp
+                echo "Enable Apache Security: `cat $TMPDIR/x7.tmp` \n" >> $TMPDIR/build.tmp
+                echo "Disable HTTP Port: `cat $TMPDIR/x8.tmp` \n" >> $TMPDIR/build.tmp
+                echo "PHP Max Upload Size: `cat $TMPDIR/x9.tmp` \n" >> $TMPDIR/build.tmp
 
-		# Final build confirmation. No to exit.
-        	dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_CONFIRM`\n\n`cat $TMPDIR/build.tmp`" 20 80 && {
-	        	echo "Yes" > $TMPDIR/x10.tmp
-        	} || {
-	        	echo "No" > $TMPDIR/x10.tmp
-		exit 1
-        	}
+                # Final build confirmation. No to exit.
+                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_CONFIRM`\n\n`cat $TMPDIR/build.tmp`" 20 80 && {
+                        echo "Yes" > $TMPDIR/x10.tmp
+                } || {
+                        echo "No" > $TMPDIR/x10.tmp
+                clear
+                exit 1
+                }
 
-	# Ending brace for reusing config
-	}
+        # Ending brace for reusing config
+        }
 
 # Ending brace for option1
 } || {
-	clear
-	disp_noti "$DATE - Exit requested.\n" | tee -a $LOGFILE;
-	echo "0" > $TMPDIR/x0.tmp
-	exit 1
+        disp_noti "$DATE - Exit requested.\n" | tee -a $LOGFILE;
+        echo "0" > $TMPDIR/x0.tmp
+        clear
+        exit 1
 }
 
 function process_build(){
 disp_noti "$DATE - Entering Build mode...\n" | tee -a $LOGFILE;
 clear
 
-	# Declare the build param
-	APPLY_CFG1="`cat $TMPDIR/build.tmp | grep "ServerName" | cut -d" " -f2`";
-	APPLY_CFG2="`cat $TMPDIR/build.tmp | grep "ServerPort" | cut -d" " -f2`";
-	APPLY_CFG3="`cat $TMPDIR/build.tmp | grep "ServerTokens" | cut -d" " -f2`";
-	APPLY_CFG4="`cat $TMPDIR/build.tmp | grep "ServerSignature" | cut -d" " -f2`";
-	APPLY_CFG5="`cat $TMPDIR/build.tmp | grep "TLS" | cut -d":" -f2 | cut -d" " -f2`";
-	APPLY_CFG6="`cat $TMPDIR/build.tmp | grep "Security" | cut -d":" -f2 | cut -d" " -f2`";
-	APPLY_CFG7="`cat $TMPDIR/build.tmp | grep "HTTP" | cut -d":" -f2 | cut -d" " -f2`";
-	APPLY_CFG8="`cat $TMPDIR/build.tmp | grep "PHP" | cut -d":" -f2 | cut -d" " -f2`";
+        # Declare the build param
+        APPLY_CFG1="`cat $TMPDIR/build.tmp | grep "ServerName" | cut -d" " -f2`";
+        APPLY_CFG2="`cat $TMPDIR/build.tmp | grep "ServerPort" | cut -d" " -f2`";
+        APPLY_CFG3="`cat $TMPDIR/build.tmp | grep "ServerTokens" | cut -d" " -f2`";
+        APPLY_CFG4="`cat $TMPDIR/build.tmp | grep "ServerSignature" | cut -d" " -f2`";
+        APPLY_CFG5="`cat $TMPDIR/build.tmp | grep "TLS" | cut -d":" -f2 | cut -d" " -f2`";
+        APPLY_CFG6="`cat $TMPDIR/build.tmp | grep "Security" | cut -d":" -f2 | cut -d" " -f2`";
+        APPLY_CFG7="`cat $TMPDIR/build.tmp | grep "HTTP" | cut -d":" -f2 | cut -d" " -f2`";
+        APPLY_CFG8="`cat $TMPDIR/build.tmp | grep "PHP" | cut -d":" -f2 | cut -d" " -f2`";
 
-	# Process build depending on the build file
-	disp_stat "$DATE - Copying original configs...\n" | tee -a $LOGFILE;
-	cp $BASEPATH/000-default.conf.orig $APACHEDIR/sites-available/000-default.conf
-       	cp $BASEPATH/security.conf.orig $APACHEDIR/conf-available/security.conf
-	cp $BASEPATH/ports.conf.orig $APACHEDIR/ports.conf
-	cp $BASEPATH/php.ini $PHPDIR/php.ini	
+        # Process build depending on the build file
+        disp_stat "$DATE - Copying original configs...\n" | tee -a $LOGFILE;
+        cp $BASEPATH/000-default.conf.orig $APACHEDIR/sites-available/000-default.conf
+        cp $BASEPATH/security.conf.orig $APACHEDIR/conf-available/security.conf
+        cp $BASEPATH/ports.conf.orig $APACHEDIR/ports.conf
+        cp $BASEPATH/php.ini $PHPDIR/php.ini
 
-	# 01 Apache modifications
-	disp_stat "$DATE - Modiying Apache configuration...\n" | tee -a $LOGFILE; sleep 3
+        # 01 Apache modifications
+        disp_stat "$DATE - Modiying Apache configuration...\n" | tee -a $LOGFILE; sleep 3
 
-		sed -i "s/XXXX-XXXX-XXXX-XXXX/$APPLY_CFG1/g" $APACHEDIR/sites-available/000-default.conf
-		
+                sed -i "s/XXXX-XXXX-XXXX-XXXX/$APPLY_CFG1/g" $APACHEDIR/sites-available/000-default.conf
+
                 # Restart Apache
                 /usr/sbin/a2ensite 000-default
                 /usr/bin/systemctl restart apache2
@@ -294,33 +309,33 @@ clear
                         disp_good "$DATE - Not generating TLS certificate from Certbot...\n" | tee -a $LOGFILE;
                 fi
 
-		disp_stat "$DATE - Applying other web parameters...\n" | tee -a $LOGFILE;
-		sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/sites-available/000-default-le-ssl.conf
-		sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/ports.conf
-		sed -i "s/ServerTokens OS/ServerTokens $APPLY_CFG3/g" $APACHEDIR/conf-available/security.conf
-		sed -i "s/ServerSignature Off/ServerSignature $APPLY_CFG4/g" $APACHEDIR/conf-available/security.conf
-		sed -i "s/20M/$APPLY_CFG8/g" $PHPDIR/php.ini
+                disp_stat "$DATE - Applying other web parameters...\n" | tee -a $LOGFILE;
+                sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/sites-available/000-default-le-ssl.conf
+                sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/ports.conf
+                sed -i "s/ServerTokens OS/ServerTokens $APPLY_CFG3/g" $APACHEDIR/conf-available/security.conf
+                sed -i "s/ServerSignature Off/ServerSignature $APPLY_CFG4/g" $APACHEDIR/conf-available/security.conf
+                sed -i "s/20M/$APPLY_CFG8/g" $PHPDIR/php.ini
 
                 if [[ "$APPLY_CFG6" == "Yes" ]]; then
-			disp_stat "$DATE - Applying other security settings...\n" | tee -a $LOGFILE;
+                        disp_stat "$DATE - Applying other security settings...\n" | tee -a $LOGFILE;
                         echo " " >> $APACHEDIR/conf-available/security.conf
                         echo "Header set X-Content-Type-Options: \"nosniff\"" >> $APACHEDIR/conf-available/security.conf
                         echo "Header set X-Frame-Options: \"sameorigin\"" >> $APACHEDIR/conf-available/security.conf
-			disp_good "$DATE - Apache modification completed.\n" | tee -a $LOGFILE;
+                        disp_good "$DATE - Apache modification completed.\n" | tee -a $LOGFILE;
                 else
                         disp_good "$DATE - Apache modification completed.\n" | tee -a $LOGFILE;
                 fi
 
-		if [[ "$APPLY_CFG7" == "Yes" ]]; then
+                if [[ "$APPLY_CFG7" == "Yes" ]]; then
                         disp_stat "$DATE - Disabling HTTP to run in HTTPS only mode...\n" | tee -a $LOGFILE; sleep 3
-				/usr/sbin/a2dissite 000-default
-				sed -i "s/Listen 80/#Listen 80/g" $APACHEDIR/ports.conf
+                                /usr/sbin/a2dissite 000-default
+                                sed -i "s/Listen 80/#Listen 80/g" $APACHEDIR/ports.conf
                         disp_noti "$DATE - Restarting Apache...\n" | tee -a $LOGFILE; sleep 3
-                        	/usr/bin/systemctl restart apache2
-				lsof -i:80
-				lsof -i:$APPLY_CFG2
-		else
-			disp_good "$DATE - Disabling HTTP port not requested.\n" | tee -a $LOGFILE;
+                                /usr/bin/systemctl restart apache2
+                                lsof -i:80
+                                lsof -i:$APPLY_CFG2
+                else
+                        disp_good "$DATE - Disabling HTTP port not requested.\n" | tee -a $LOGFILE;
                 fi
 
 }
@@ -331,4 +346,5 @@ load_misc
 load_customization
 process_build
 
+clear
 exit 0
