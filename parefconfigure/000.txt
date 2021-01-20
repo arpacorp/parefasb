@@ -1,0 +1,4 @@
+\nWelcome to the PAREF App Server Builder\n\n
+This script aims to automate the build process for the PAREF SMS Application. You will be asked to enter some information from time to time.\n\n
+Please read the instructions carefully as you confirm your answers and start the building process. For questions, bugs, requests, please hit us directly at #supportchannel. For help, check the man pages at "man configure". Thank you.\n\n
+- ARPACORP Team\n\n

@@ -1,0 +1,1 @@
+\nEnter the maximum upload file size that will be allowed by PHP (E.g. 20M):\n

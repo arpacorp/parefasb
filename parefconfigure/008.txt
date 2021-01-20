@@ -1,0 +1,2 @@
+\nWould you like to turn off access unencrypted HTTP traffic at TCP/80?\n\n
+By default, TCP port 80 is enabled for HTTP access while port 443 for HTTPS access. HTTP access is used by Certbot to request verification from the Certificate Authority (CA) upon key requests. If you are not using port 80, we suggest to turn it off.\n\n

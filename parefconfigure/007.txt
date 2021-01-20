@@ -1,0 +1,4 @@
+\nWould you like us to apply Apache's custom security settings?\n\n
+The following changes will be applied:\n\n
+Header set X-Content-Type-Options: "nosniff"\n
+Header set X-Frame-Options: "sameorigin"\n\n
