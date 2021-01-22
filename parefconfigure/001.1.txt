@@ -1,1 +1,0 @@
-\nEnter the existing server code to use (E.g. ph01):\n\n
