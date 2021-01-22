@@ -39,7 +39,6 @@ function errr_exit()
 }
 
 clear
-printf "$X$HEADER$Y\n";
 
 # Install man pages
 if [[ -f /usr/share/man/man8/configure.8.gz ]]; then
@@ -51,10 +50,14 @@ else
 fi
 
 # Setup symlinks
-if [[ -f $BINPT/configure ]]; then
-        disp_good "$DATE - Symlink found $BINPT/configure.\n";
+if [[ -d /etc/parefconfigure ]] && \
+   [[ -f $BINPT/configure ]] && \
+   [[ -f $BINPT/gencfvar.sh ]] && \
+   [[ -f /bin/configure ]]; then
+        disp_good "$DATE - All symlinks found $BINPT/configure.\n";
 else
-        disp_good "$DATE - Creating symlink...\n";
+        disp_good "$DATE - Recreating symlink...\n";
+                rm -f $BINPT/configure;rm -f /bin/configure;rm -f $BINPT/gencfvar.sh;rm -f /etc/parefconfigure
                 ln -s `pwd`/configure $BINPT/configure
                 ln -s $BINPT/configure /bin/configure
                 ln -s `pwd`/gencfvar.sh $BINPT/gencfvar.sh
@@ -62,10 +65,15 @@ else
 fi
 
 # Define source
-source $BINPT/gencfvar.sh
+source /usr/local/bin/gencfvar.sh
 touch $LOGFILE;
 
 function check_binaries(){
+
+dialog --backtitle "Copyright. Arpacorp. 2021. https://arpa.ph" \
+        --title " Preparing the environment " --msgbox "`cat $CUSTOM_ENV`" 15 80
+        clear
+
 disp_good "$DATE - Checking binaries...\n" | tee -a $LOGFILE;
     if [[ -f "/etc/lsb-release" ]]; then
         disp_good "$DATE - Running OS: `cat /etc/lsb-release | grep DESC | cut -d= -f2`\n" | tee -a $LOGFILE;
@@ -80,7 +88,6 @@ disp_good "$DATE - Checking binaries...\n" | tee -a $LOGFILE;
         {
                 disp_stat "$DATE - Checking ${i}...\n" | tee -a $LOGFILE;
                 if [ ! -x "$(which $i)" ]; then
-                        printf "\033[1mNot found.\033[0m\n"; sleep 1
                         disp_stat "$DATE - Installing packages... {\033[1m$i\033[0m}\n" | tee -a $LOGFILE;
                         apt-get install -y ${i}
                 if [ $? -eq 0 ]; then
@@ -104,7 +111,6 @@ elif [[ -f "/etc/redhat-release" ]]; then
         {
                 disp_stat "$DATE - Checking ${i}...\n" | tee -a $LOGFILE;
                 if [ ! -x "$(which $i)" ]; then
-                        printf "\033[1mNot found.\033[0m\n"; sleep 1
                         disp_stat "$DATE - Installing package... {\033[1m$i\033[0m}\n" | tee -a $LOGFILE;
                         yum -y install ${i}
                 if [ $? -eq 0 ]; then
@@ -130,19 +136,7 @@ function check_modules(){
         EBASEMOD="`echo "$EMODULE_U" | sed 's/|/ /g'`"
         disp_stat "$DATE - Enabling modules... {\033[1m$EBASEMOD\033[0m}\n" | tee -a $LOGFILE;
                 a2enmod $EBASEMOD
-
-        if [[ ! -d "$WEBROOT" ]]; then
-                disp_errr "$DATE - DocumentRoot $WEBROOT does not exist, creating..." | tee -a $LOGFILE;
-                        mkdir -p $WEBROOT;
-        else
-                disp_stat "$DATE - Creating default Index...\n" | tee -a $LOGFILE; sleep 3
-                        echo "" > $WEBROOT/$XIND
-                disp_stat "$DATE - Creating xinfx.php...\n" | tee -a $LOGFILE;
-                        echo "<?php phpinfo(); ?>" > $WEBROOT/$XINF;sleep 3
-                disp_stat "$DATE - Restarting Apache2...\n" | tee -a $LOGFILE;
-                        /usr/bin/systemctl restart apache2
-        fi
-                disp_good "$DATE - Loading module completed.\n" | tee -a $LOGFILE;
+                disp_good "$DATE - Loading module completed.\n" | tee -a $LOGFILE; sleep 3
 }
 
 function load_misc(){
@@ -163,35 +157,17 @@ function load_misc(){
                 echo "LABEL=UEFI      /boot/efi       vfat    defaults        0 0" >> $XFST
                 echo "glusterx:volgfs /storage glusterfs defaults,_netdev,backupvolfile-server=glustery 0 0" >> $XFST
                 mount -t glusterfs glusterx:volgfs /storage
-        disp_good "$DATE - GFS volume connected.\n" | tee -a $LOGFILE;
+        disp_good "$DATE - GFS volume connected.\n" | tee -a $LOGFILE;sleep 10
 
 }
 
-function load_customization(){
-disp_noti "$DATE - Entering GUI...\n" | tee -a $LOGFILE;
-clear
+function exec_newsrvr(){
+        clear
+                # 01 SERVER NAME
+                SERVERCODE=$(dialog --title " SERVER CONFIGURATION " \
+                --inputbox "`cat $CUSTOM_SERVERCODE`" 10 80 3>&1 1>&2 2>&3 3>&-)
+                echo "$SERVERCODE" > $TMPDIR/x1.tmp
 
-# PRIMARY SETTINGS
-dialog --title " ARPACORP - PAREF App Builder " \
-        --backtitle "Copyright. Arpacorp. 2021. https://arpa.ph" \
-        --yesno "`cat $CUSTOM_WELCOME` Would you like to continue?\n" 19 80 && {
-        echo "1" > $TMPDIR/x0.tmp
-
-                # 01 NEW OR EXISTING
-                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_EXIST`" 10 80 && {
-                echo "1" > $TMPDIR/x1.tmp
-
-                # 01 OLD SERVER
-                STOREPATH=$(dialog --title " SERVER CONFIGURATION " \
-                        --inputbox "`cat $CUSTOM_EXISTSTORE`" 12 80 3>&1 1>&2 2>&3 3>&-)
-                echo "$STOREPATH" > $TMPDIR/x1.1.tmp
-
-                # EXIT AFTER PROCESSING
-                exit 0
-
-        # Process as new server if no existing /storage config.
-        } || {
-                echo "0" > $TMPDIR/x1.tmp
                 # 02 SERVER NAME
                 SERVERNAME=$(dialog --title " SERVER CONFIGURATION " \
                 --inputbox "`cat $CUSTOM_SERVERNAME`" 17 80 3>&1 1>&2 2>&3 3>&-)
@@ -224,7 +200,7 @@ dialog --title " ARPACORP - PAREF App Builder " \
                 }
 
                 # 07 APPLY APACHE SECURITY SETTINGS
-                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_SECURITY`" 12 80 &&
+                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_SECURITY`" 12 80 && {
                 echo "Yes" > $TMPDIR/x7.tmp
                 } || {
                 echo "No" > $TMPDIR/x7.tmp
@@ -243,7 +219,8 @@ dialog --title " ARPACORP - PAREF App Builder " \
                 echo "$MAXSIZE" > $TMPDIR/x9.tmp
 
                 # 10 CONFIRM AND APPLY CUSTOMIZATION
-                echo "ServerName: `cat $TMPDIR/x2.tmp` \n" > $TMPDIR/build.tmp
+                echo "ServerCode: `cat $TMPDIR/x1.tmp` \n" > $TMPDIR/build.tmp
+                echo "ServerName: `cat $TMPDIR/x2.tmp` \n" >> $TMPDIR/build.tmp
                 echo "ServerPort: `cat $TMPDIR/x3.tmp` \n" >> $TMPDIR/build.tmp
                 echo "ServerTokens: `cat $TMPDIR/x4.tmp` \n" >> $TMPDIR/build.tmp
                 echo "ServerSignature: `cat $TMPDIR/x5.tmp` \n" >> $TMPDIR/build.tmp
@@ -253,30 +230,24 @@ dialog --title " ARPACORP - PAREF App Builder " \
                 echo "PHP Max Upload Size: `cat $TMPDIR/x9.tmp` \n" >> $TMPDIR/build.tmp
 
                 # Final build confirmation. No to exit.
-                dialog --title " SERVER CONFIGURATION " --yesno "`cat $CUSTOM_CONFIRM`\n\n`cat $TMPDIR/build.tmp`" 20 80 && {
+                dialog --title " SERVER CONFIGURATION " \
+                        --yesno "`cat $CUSTOM_CONFIRM`\n\n`cat $TMPDIR/build.tmp`" 20 80 && {
                         echo "Yes" > $TMPDIR/x10.tmp
                 } || {
                         echo "No" > $TMPDIR/x10.tmp
                 clear
                 exit 1
                 }
-
-        # Ending brace for reusing config
-        }
-
-# Ending brace for option1
-} || {
-        disp_noti "$DATE - Exit requested.\n" | tee -a $LOGFILE;
-        echo "0" > $TMPDIR/x0.tmp
-        clear
-        exit 1
 }
 
 function process_build(){
-disp_noti "$DATE - Entering Build mode...\n" | tee -a $LOGFILE;
-clear
+
+        clear
+        disp_noti "$DATE - Entering Build mode...\n" | tee -a $LOGFILE; sleep 3
+
 
         # Declare the build param
+        APPLY_CODE="`cat $TMPDIR/build.tmp | grep "ServerCode" | cut -d" " -f2`";
         APPLY_CFG1="`cat $TMPDIR/build.tmp | grep "ServerName" | cut -d" " -f2`";
         APPLY_CFG2="`cat $TMPDIR/build.tmp | grep "ServerPort" | cut -d" " -f2`";
         APPLY_CFG3="`cat $TMPDIR/build.tmp | grep "ServerTokens" | cut -d" " -f2`";
@@ -286,30 +257,67 @@ clear
         APPLY_CFG7="`cat $TMPDIR/build.tmp | grep "HTTP" | cut -d":" -f2 | cut -d" " -f2`";
         APPLY_CFG8="`cat $TMPDIR/build.tmp | grep "PHP" | cut -d":" -f2 | cut -d" " -f2`";
 
+        if [[ ! -d "$WEBROOT" ]]; then
+                disp_errr "$DATE - DocumentRoot $WEBROOT does not exist, creating...\n" | tee -a $LOGFILE;
+                        mkdir -p $WEBROOT;
+        fi
+
+        # Creating storage path
+        if [[ ! -d $STORPUB/www$APPLY_CODE ]] && \
+           [[ ! -d $STORCON/etc$APPLY_CODE ]]; then
+                disp_stat "$DATE - Creating $APPLY_CODE in $STORPUB and $STORCON...\n";sleep 3
+
+                # Create a link from storage to documentroot
+                mv $WEBROOT $STORPUB/www$APPLY_CODE
+                ln -s $STORPUB/www$APPLY_CODE $WEBROOT
+
+                # Create a link from storage to /etc
+                systemctl stop apache2
+                mkdir -p $STORCON/etc$APPLY_CODE
+                mv /etc/apache2 $STORCON/etc$APPLY_CODE/.
+                ln -s $STORCON/etc$APPLY_CODE/apache2 /etc/apache2
+                mv /etc/letsencrypt $STORCON/etc$APPLY_CODE/.
+                ln -s $STORCON/etc$APPLY_CODE/letsencrypt /etc/letsencrypt
+                systemctl start apache2
+        else
+                disp_good "$DATE - Found servercode in $STORPUB and $STORCON. Not linking.\n";sleep 3
+        fi
+
         # Process build depending on the build file
         disp_stat "$DATE - Copying original configs...\n" | tee -a $LOGFILE;
         cp $BASEPATH/000-default.conf.orig $APACHEDIR/sites-available/000-default.conf
         cp $BASEPATH/security.conf.orig $APACHEDIR/conf-available/security.conf
         cp $BASEPATH/ports.conf.orig $APACHEDIR/ports.conf
-        cp $BASEPATH/php.ini $PHPDIR/php.ini
+        cp $BASEPATH/php.ini.orig $PHPDIR/php.ini
+        cp $BASEPATH/robots.txt $WEBROOT/robots.txt
 
         # 01 Apache modifications
         disp_stat "$DATE - Modiying Apache configuration...\n" | tee -a $LOGFILE; sleep 3
+        disp_stat "$DATE - Creating default index file...\n" | tee -a $LOGFILE; sleep 3
+                echo "" > $WEBROOT/$XIND
+        disp_stat "$DATE - Creating xinfx.php...\n" | tee -a $LOGFILE; sleep 3
+                echo "<?php phpinfo(); ?>" > $WEBROOT/$XINF;
+        disp_stat "$DATE - Adding .htaccess rewrite rules...\n" | tee -a $LOGFILE; sleep 3
+                echo "RewriteEngine On" > $WEBROOT/.htaccess
+                echo "RewriteCond %{HTTPS} off" >> $WEBROOT/.htaccess
+                echo 'RewriteRule ^(.*)$ https://XXXX-XXXX-XXXX-XXXX/$1 [L,R=301]' >> $WEBROOT/.htaccess
 
                 sed -i "s/XXXX-XXXX-XXXX-XXXX/$APPLY_CFG1/g" $APACHEDIR/sites-available/000-default.conf
+                sed -i "s/XXXX-XXXX-XXXX-XXXX/$APPLY_CFG1/g" $WEBROOT/.htaccess
 
-                # Restart Apache
+        # Restart Apache
+        disp_stat "$DATE - Restarting Apache2...\n" | tee -a $LOGFILE; sleep 3
                 /usr/sbin/a2ensite 000-default
                 /usr/bin/systemctl restart apache2
 
-                if [[ "$APPLY_CFG5" == "Yes" ]]; then
-                        disp_stat "$DATE - Generating certificate from Certbot...\n" | tee -a $LOGFILE; sleep 3
-                                certbot --apache --non-interactive --agree-tos --domains "$APPLY_CFG1" --email "$EMAIL";
-                else
-                        disp_good "$DATE - Not generating TLS certificate from Certbot...\n" | tee -a $LOGFILE;
-                fi
+        if [[ "$APPLY_CFG5" == "Yes" ]]; then
+        disp_stat "$DATE - Generating certificate from Certbot...\n" | tee -a $LOGFILE; sleep 3
+                certbot --apache --non-interactive --agree-tos --domains "$APPLY_CFG1" --email "$EMAIL";
+        else
+                disp_good "$DATE - Not generating TLS certificate from Certbot...\n" | tee -a $LOGFILE;
+        fi
 
-                disp_stat "$DATE - Applying other web parameters...\n" | tee -a $LOGFILE;
+        disp_stat "$DATE - Applying other web parameters...\n" | tee -a $LOGFILE;
                 sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/sites-available/000-default-le-ssl.conf
                 sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/ports.conf
                 sed -i "s/ServerTokens OS/ServerTokens $APPLY_CFG3/g" $APACHEDIR/conf-available/security.conf
@@ -340,11 +348,81 @@ clear
 
 }
 
-check_binaries
-check_modules
-load_misc
-load_customization
-process_build
+# Link the new image to an existing server configuration
+function exec_lnksrvr(){
 
-clear
+        clear
+        # 01 SERVER CODE
+        SERVERCODE=$(dialog --title " SERVER CONFIGURATION " \
+        --inputbox "`cat $CUSTOM_SERVERCODE`" 10 80 3>&1 1>&2 2>&3 3>&-)
+                echo "$SERVERCODE" > $TMPDIR/x1.tmp
+
+        clear
+        if [[ -d "$STORCON/etc$SERVERCODE" ]] && \
+           [[ -d "$STORPUB/www$SERVERCODE" ]]; then
+                systemctl stop apache2
+                disp_noti "$DATE - Found both $STORCON/etc$SERVERCODE and $STORCON/etc$SERVERCODE...\n" \
+                | tee -a $LOGFILE;sleep 1
+
+                # Check if html, apache2, letsencrypt is existing
+                if [[ -d $WEBROOT ]] || \
+                   [[ -d /etc/apache2 ]] || \
+                   [[ -d /etc/letsencrypt ]]; then
+                        disp_noti "$DATE - Found entries, renaming html, apache2, letsencrypt...\n" \
+                        | tee -a $LOGFILE;sleep 1
+                                mv $WEBROOT $WEBROOT-$DATE
+                                mv /etc/apache2 /etc/apache2-$DATE
+                                mv /etc/letsencrypt /etc/letsencrypt-$DATE
+                        disp_noti "$DATE - Linking this build to $SERVERCODE...\n" | tee -a $LOGFILE;
+                                ln -s $STORPUB/www$SERVERCODE $WEBROOT
+                                ln -s $STORCON/etc$SERVERCODE/apache2 /etc/apache2
+                                ln -s $STORCON/etc$SERVERCODE/letsencrypt /etc/letsencrypt
+                        disp_good "$DATE - $SERVERCODE has been linked.\n" | tee -a $LOGFILE; sleep 3
+                else
+                        disp_noti "$DATE - Linking this build to $SERVERCODE...\n" | tee -a $LOGFILE;
+                                ln -s $STORPUB/www$SERVERCODE $WEBROOT
+                                ln -s $STORCON/etc$SERVERCODE/apache2 /etc/apache2
+                                ln -s $STORCON/etc$SERVERCODE/letsencrypt /etc/letsencrypt
+                        disp_good "$DATE - $SERVERCODE has been linked.\n" | tee -a $LOGFILE; sleep 3
+
+                fi
+                # Restart apache
+                disp_good "$DATE - Restarting Apache...\n" | tee -a $LOGFILE;
+                systemctl start apache2
+        else
+                disp_errr "$DATE - No existing $SERVERCODE servercode found in /storage.\n"; sleep 3
+        fi
+exit 1
+}
+
+function load_customization(){
+        clear
+        printf "$X$HEADER$Y\n" | tee -a $LOGFILE;sleep 1
+        disp_noti "$DATE - Entering GUI...\n" | tee -a $LOGFILE;sleep 2
+
+        # PRIMARY SETTINGS
+        MAINOPT=$(dialog --title " ARPACORP - PAREF App Builder " \
+                --backtitle "Copyright. Arpacorp. 2021. https://arpa.ph" \
+                --menu "`cat $CUSTOM_WELCOME` Choose an option to continue or press cancel.\n" \
+                21 80 0 1 "[P]repare the environment." \
+                        2 "[S]etup a new server." \
+                        3 "[L]ink an existing server." 3>&1 1>&2 2>&3 3>&-)
+                echo "$MAINOPT" > $TMPDIR/x0.tmp
+
+        BUILD="`cat $TMPDIR/x0.tmp`";
+          if [[ "$BUILD" == "1" ]]; then
+                check_binaries
+                check_modules
+                load_misc
+        elif [[ "$BUILD" == "2" ]]; then
+                exec_newsrvr
+                process_build
+        elif [[ "$BUILD" == "3" ]]; then
+                exec_lnksrvr
+          fi
+}
+
+# execute mainopt
+load_customization
+
 exit 0
