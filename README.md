@@ -1,8 +1,24 @@
 # parefasb
 PAREF App Server Builder
 
-Please read the man pages, man configure for more details.
+# Introduction
+PAREF App Server Builder is a script to build custom PAREF SMS servers.
 
-Video: https://vimeo.com/502561934
+# Requirements
+- Provisioned PAREF SMS image created from the cloud provider.
+- Server must be joined in the PAREF VPC.
 
-eric@arpa.ph, https://github.com/arpacorp
+Please read the man pages, `man configure` for more details.
+
+# Installation
+Please see video: https://vimeo.com/502561934
+
+## From source
+You can pull this from source using:
+
+`wget https://github.com/arpacorp/parefasb/releases/download/{VERSION_NO}/parefasb.zip && unzip parefasb.zip && cd parefasb && chmod +x configure && /usr/bin/bash configure
+eric@arpa.ph, https://github.com/arpacorp`
+
+or use the binary installed from the cloud image img.paref.edu.ph-stable-{VERSION_NO}
+
+`/bin/configure` or `/usr/local/bin/configure`
