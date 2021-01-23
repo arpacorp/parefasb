@@ -16,8 +16,7 @@ Please see video: https://vimeo.com/502561934
 ## From source
 You can pull this from source using:
 
-`wget https://github.com/arpacorp/parefasb/releases/download/{VERSION_NO}/parefasb.zip && unzip parefasb.zip && cd parefasb && chmod +x configure && /usr/bin/bash configure
-eric@arpa.ph, https://github.com/arpacorp`
+`wget https://github.com/arpacorp/parefasb/releases/download/{VERSION_NO}/parefasb.zip && unzip parefasb.zip && cd parefasb && chmod +x configure && /usr/bin/bash configure`
 
 or use the binary installed from the cloud image img.paref.edu.ph-stable-{VERSION_NO}
 
