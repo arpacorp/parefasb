@@ -28,6 +28,7 @@ X="\x1B[01;33m"
 Y="\x1B[0m"
 ## END GENERAL SETTINGS ##
 
+## Logging functions
 function disp_stat(){ printf "\x1B[01;34m[$UTFX]\x1B[0m $1"; }
 function disp_good(){ printf "\x1B[01;32m[$UTFC]\x1B[0m $1"; }
 function disp_errr(){ printf "\x1B[01;31m[$UTFX]\x1B[0m $1"; }
@@ -40,7 +41,7 @@ function errr_exit()
 
 clear
 
-# Install man pages
+## Man pages installation
 if [[ -f /usr/share/man/man8/configure.8.gz ]]; then
         disp_good "$DATE - Man page found.\n";
 else
@@ -49,7 +50,7 @@ else
         gzip /usr/share/man/man8/configure.8
 fi
 
-# Setup symlinks
+## Initial symlink setup
 if [[ -d /etc/parefconfigure ]] && \
    [[ -f $BINPT/configure ]] && \
    [[ -f $BINPT/gencfvar.sh ]] && \
@@ -57,26 +58,26 @@ if [[ -d /etc/parefconfigure ]] && \
         disp_good "$DATE - All symlinks found $BINPT/configure.\n";
 else
         disp_good "$DATE - Recreating symlink...\n";
-                rm -f $BINPT/configure;rm -f /bin/configure;rm -f $BINPT/gencfvar.sh;rm -f /etc/parefconfigure
+		rm -f $BINPT/configure;rm -f /bin/configure;rm -f $BINPT/gencfvar.sh;rm -f /etc/parefconfigure
                 ln -s `pwd`/configure $BINPT/configure
                 ln -s $BINPT/configure /bin/configure
                 ln -s `pwd`/gencfvar.sh $BINPT/gencfvar.sh
                 ln -sr `pwd`/parefconfigure /etc/parefconfigure
 fi
 
-# Define source
+## Source the source
 source /usr/local/bin/gencfvar.sh
 touch $LOGFILE;
 
+## Environment preparation function
 function check_binaries(){
-
 dialog --backtitle "Copyright. Arpacorp. 2021. https://arpa.ph" \
-        --title " Preparing the environment " --msgbox "`cat $CUSTOM_ENV`" 15 80
-        clear
+	--title " Preparing the environment " --msgbox "`cat $CUSTOM_ENV`" 15 80
+	clear
 
-disp_good "$DATE - Checking binaries...\n" | tee -a $LOGFILE;
-    if [[ -f "/etc/lsb-release" ]]; then
-        disp_good "$DATE - Running OS: `cat /etc/lsb-release | grep DESC | cut -d= -f2`\n" | tee -a $LOGFILE;
+  disp_good "$DATE - Checking binaries...\n" | tee -a $LOGFILE;
+  if [[ -f "/etc/lsb-release" ]]; then
+       	disp_good "$DATE - Running OS: `cat /etc/lsb-release | grep DESC | cut -d= -f2`\n" | tee -a $LOGFILE;
 
         BUILD_DEPS="software-properties-common" && dpkg-reconfigure locales
         apt-get install --no-install-recommends -y $BUILD_DEPS
@@ -162,13 +163,13 @@ function load_misc(){
 }
 
 function exec_newsrvr(){
-        clear
+	clear
                 # 01 SERVER NAME
                 SERVERCODE=$(dialog --title " SERVER CONFIGURATION " \
                 --inputbox "`cat $CUSTOM_SERVERCODE`" 10 80 3>&1 1>&2 2>&3 3>&-)
                 echo "$SERVERCODE" > $TMPDIR/x1.tmp
 
-                # 02 SERVER NAME
+		# 02 SERVER NAME
                 SERVERNAME=$(dialog --title " SERVER CONFIGURATION " \
                 --inputbox "`cat $CUSTOM_SERVERNAME`" 17 80 3>&1 1>&2 2>&3 3>&-)
                 echo "$SERVERNAME" > $TMPDIR/x2.tmp
@@ -219,7 +220,7 @@ function exec_newsrvr(){
                 echo "$MAXSIZE" > $TMPDIR/x9.tmp
 
                 # 10 CONFIRM AND APPLY CUSTOMIZATION
-                echo "ServerCode: `cat $TMPDIR/x1.tmp` \n" > $TMPDIR/build.tmp
+		echo "ServerCode: `cat $TMPDIR/x1.tmp` \n" > $TMPDIR/build.tmp
                 echo "ServerName: `cat $TMPDIR/x2.tmp` \n" >> $TMPDIR/build.tmp
                 echo "ServerPort: `cat $TMPDIR/x3.tmp` \n" >> $TMPDIR/build.tmp
                 echo "ServerTokens: `cat $TMPDIR/x4.tmp` \n" >> $TMPDIR/build.tmp
@@ -231,8 +232,8 @@ function exec_newsrvr(){
 
                 # Final build confirmation. No to exit.
                 dialog --title " SERVER CONFIGURATION " \
-                        --yesno "`cat $CUSTOM_CONFIRM`\n\n`cat $TMPDIR/build.tmp`" 20 80 && {
-                        echo "Yes" > $TMPDIR/x10.tmp
+			--yesno "`cat $CUSTOM_CONFIRM`\n\n`cat $TMPDIR/build.tmp`" 20 80 && {
+			echo "Yes" > $TMPDIR/x10.tmp
                 } || {
                         echo "No" > $TMPDIR/x10.tmp
                 clear
@@ -242,12 +243,12 @@ function exec_newsrvr(){
 
 function process_build(){
 
-        clear
-        disp_noti "$DATE - Entering Build mode...\n" | tee -a $LOGFILE; sleep 3
+	clear
+	disp_noti "$DATE - Entering Build mode...\n" | tee -a $LOGFILE; sleep 3
 
 
         # Declare the build param
-        APPLY_CODE="`cat $TMPDIR/build.tmp | grep "ServerCode" | cut -d" " -f2`";
+	APPLY_CODE="`cat $TMPDIR/build.tmp | grep "ServerCode" | cut -d" " -f2`";
         APPLY_CFG1="`cat $TMPDIR/build.tmp | grep "ServerName" | cut -d" " -f2`";
         APPLY_CFG2="`cat $TMPDIR/build.tmp | grep "ServerPort" | cut -d" " -f2`";
         APPLY_CFG3="`cat $TMPDIR/build.tmp | grep "ServerTokens" | cut -d" " -f2`";
@@ -262,26 +263,26 @@ function process_build(){
                         mkdir -p $WEBROOT;
         fi
 
-        # Creating storage path
-        if [[ ! -d $STORPUB/www$APPLY_CODE ]] && \
-           [[ ! -d $STORCON/etc$APPLY_CODE ]]; then
-                disp_stat "$DATE - Creating $APPLY_CODE in $STORPUB and $STORCON...\n";sleep 3
+	# Creating storage path
+	if [[ ! -d $STORPUB/www$APPLY_CODE ]] && \
+	   [[ ! -d $STORCON/etc$APPLY_CODE ]]; then
+		disp_stat "$DATE - Creating $APPLY_CODE in $STORPUB and $STORCON...\n";sleep 3
 
-                # Create a link from storage to documentroot
-                mv $WEBROOT $STORPUB/www$APPLY_CODE
-                ln -s $STORPUB/www$APPLY_CODE $WEBROOT
+		# Create a link from storage to documentroot
+		mv $WEBROOT $STORPUB/www$APPLY_CODE
+		ln -s $STORPUB/www$APPLY_CODE $WEBROOT
 
-                # Create a link from storage to /etc
-                systemctl stop apache2
-                mkdir -p $STORCON/etc$APPLY_CODE
-                mv /etc/apache2 $STORCON/etc$APPLY_CODE/.
-                ln -s $STORCON/etc$APPLY_CODE/apache2 /etc/apache2
-                mv /etc/letsencrypt $STORCON/etc$APPLY_CODE/.
-                ln -s $STORCON/etc$APPLY_CODE/letsencrypt /etc/letsencrypt
-                systemctl start apache2
-        else
-                disp_good "$DATE - Found servercode in $STORPUB and $STORCON. Not linking.\n";sleep 3
-        fi
+		# Create a link from storage to /etc
+		systemctl stop apache2
+		mkdir -p $STORCON/etc$APPLY_CODE
+		mv /etc/apache2 $STORCON/etc$APPLY_CODE/.
+		ln -s $STORCON/etc$APPLY_CODE/apache2 /etc/apache2
+		mv /etc/letsencrypt $STORCON/etc$APPLY_CODE/.
+		ln -s $STORCON/etc$APPLY_CODE/letsencrypt /etc/letsencrypt
+		systemctl start apache2
+	else
+		disp_good "$DATE - Found servercode in $STORPUB and $STORCON. Not linking.\n";sleep 3
+	fi
 
         # Process build depending on the build file
         disp_stat "$DATE - Copying original configs...\n" | tee -a $LOGFILE;
@@ -289,40 +290,41 @@ function process_build(){
         cp $BASEPATH/security.conf.orig $APACHEDIR/conf-available/security.conf
         cp $BASEPATH/ports.conf.orig $APACHEDIR/ports.conf
         cp $BASEPATH/php.ini.orig $PHPDIR/php.ini
-        cp $BASEPATH/robots.txt $WEBROOT/robots.txt
+	cp $BASEPATH/robots.txt $WEBROOT/robots.txt
 
         # 01 Apache modifications
         disp_stat "$DATE - Modiying Apache configuration...\n" | tee -a $LOGFILE; sleep 3
-        disp_stat "$DATE - Creating default index file...\n" | tee -a $LOGFILE; sleep 3
-                echo "" > $WEBROOT/$XIND
-        disp_stat "$DATE - Creating xinfx.php...\n" | tee -a $LOGFILE; sleep 3
-                echo "<?php phpinfo(); ?>" > $WEBROOT/$XINF;
-        disp_stat "$DATE - Adding .htaccess rewrite rules...\n" | tee -a $LOGFILE; sleep 3
-                echo "RewriteEngine On" > $WEBROOT/.htaccess
-                echo "RewriteCond %{HTTPS} off" >> $WEBROOT/.htaccess
-                echo 'RewriteRule ^(.*)$ https://XXXX-XXXX-XXXX-XXXX/$1 [L,R=301]' >> $WEBROOT/.htaccess
+	disp_stat "$DATE - Creating default index file...\n" | tee -a $LOGFILE; sleep 3
+        	echo "" > $WEBROOT/$XIND
+	disp_stat "$DATE - Creating xinfx.php...\n" | tee -a $LOGFILE; sleep 3
+		echo "<?php phpinfo(); ?>" > $WEBROOT/$XINF;
+	disp_stat "$DATE - Adding .htaccess rewrite rules...\n" | tee -a $LOGFILE; sleep 3
+		echo "RewriteEngine On" > $WEBROOT/.htaccess
+		echo "RewriteCond %{HTTPS} off" >> $WEBROOT/.htaccess
+		echo 'RewriteRule ^(.*)$ https://XXXX-XXXX-XXXX-XXXX/$1 [L,R=301]' >> $WEBROOT/.htaccess
 
                 sed -i "s/XXXX-XXXX-XXXX-XXXX/$APPLY_CFG1/g" $APACHEDIR/sites-available/000-default.conf
-                sed -i "s/XXXX-XXXX-XXXX-XXXX/$APPLY_CFG1/g" $WEBROOT/.htaccess
-
-        # Restart Apache
-        disp_stat "$DATE - Restarting Apache2...\n" | tee -a $LOGFILE; sleep 3
+		sed -i "s/XXXX-XXXX-XXXX-XXXX/$APPLY_CFG1/g" $WEBROOT/.htaccess
+                
+	# Restart Apache
+	disp_stat "$DATE - Restarting Apache2...\n" | tee -a $LOGFILE; sleep 3
                 /usr/sbin/a2ensite 000-default
                 /usr/bin/systemctl restart apache2
 
-        if [[ "$APPLY_CFG5" == "Yes" ]]; then
+	if [[ "$APPLY_CFG5" == "Yes" ]]; then
         disp_stat "$DATE - Generating certificate from Certbot...\n" | tee -a $LOGFILE; sleep 3
-                certbot --apache --non-interactive --agree-tos --domains "$APPLY_CFG1" --email "$EMAIL";
-        else
-                disp_good "$DATE - Not generating TLS certificate from Certbot...\n" | tee -a $LOGFILE;
-        fi
+		certbot --apache --non-interactive --agree-tos --domains "$APPLY_CFG1" --email "$EMAIL";
+	else
+		disp_good "$DATE - Not generating TLS certificate from Certbot...\n" | tee -a $LOGFILE;
+	fi
 
         disp_stat "$DATE - Applying other web parameters...\n" | tee -a $LOGFILE;
-                sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/sites-available/000-default-le-ssl.conf
+        	sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/sites-available/000-default-le-ssl.conf
                 sed -i "s/443/$APPLY_CFG2/g" $APACHEDIR/ports.conf
                 sed -i "s/ServerTokens OS/ServerTokens $APPLY_CFG3/g" $APACHEDIR/conf-available/security.conf
                 sed -i "s/ServerSignature Off/ServerSignature $APPLY_CFG4/g" $APACHEDIR/conf-available/security.conf
                 sed -i "s/20M/$APPLY_CFG8/g" $PHPDIR/php.ini
+		sed -i "s/20M/$APPLY_CFG8/g" $PHPDIR/php.ini
 
                 if [[ "$APPLY_CFG6" == "Yes" ]]; then
                         disp_stat "$DATE - Applying other security settings...\n" | tee -a $LOGFILE;
@@ -351,48 +353,80 @@ function process_build(){
 # Link the new image to an existing server configuration
 function exec_lnksrvr(){
 
-        clear
-        # 01 SERVER CODE
-        SERVERCODE=$(dialog --title " SERVER CONFIGURATION " \
-        --inputbox "`cat $CUSTOM_SERVERCODE`" 10 80 3>&1 1>&2 2>&3 3>&-)
-                echo "$SERVERCODE" > $TMPDIR/x1.tmp
+	clear
+	# 01 SERVER CODE
+	SERVERCODE=$(dialog --title " SERVER CONFIGURATION " \
+	--inputbox "`cat $CUSTOM_SERVERCODE`" 10 80 3>&1 1>&2 2>&3 3>&-)
+		echo "$SERVERCODE" > $TMPDIR/x1.tmp
+	
+	clear
+	if [[ -d "$STORCON/etc$SERVERCODE" ]] && \
+	   [[ -d "$STORPUB/www$SERVERCODE" ]]; then
+		systemctl stop apache2
+		disp_noti "$DATE - Found both $STORCON/etc$SERVERCODE and $STORCON/etc$SERVERCODE...\n" \
+		| tee -a $LOGFILE;sleep 1
 
-        clear
-        if [[ -d "$STORCON/etc$SERVERCODE" ]] && \
-           [[ -d "$STORPUB/www$SERVERCODE" ]]; then
-                systemctl stop apache2
-                disp_noti "$DATE - Found both $STORCON/etc$SERVERCODE and $STORCON/etc$SERVERCODE...\n" \
-                | tee -a $LOGFILE;sleep 1
-
-                # Check if html, apache2, letsencrypt is existing
-                if [[ -d $WEBROOT ]] || \
-                   [[ -d /etc/apache2 ]] || \
-                   [[ -d /etc/letsencrypt ]]; then
-                        disp_noti "$DATE - Found entries, renaming html, apache2, letsencrypt...\n" \
-                        | tee -a $LOGFILE;sleep 1
-                                mv $WEBROOT $WEBROOT-$DATE
-                                mv /etc/apache2 /etc/apache2-$DATE
-                                mv /etc/letsencrypt /etc/letsencrypt-$DATE
-                        disp_noti "$DATE - Linking this build to $SERVERCODE...\n" | tee -a $LOGFILE;
-                                ln -s $STORPUB/www$SERVERCODE $WEBROOT
-                                ln -s $STORCON/etc$SERVERCODE/apache2 /etc/apache2
-                                ln -s $STORCON/etc$SERVERCODE/letsencrypt /etc/letsencrypt
-                        disp_good "$DATE - $SERVERCODE has been linked.\n" | tee -a $LOGFILE; sleep 3
-                else
-                        disp_noti "$DATE - Linking this build to $SERVERCODE...\n" | tee -a $LOGFILE;
-                                ln -s $STORPUB/www$SERVERCODE $WEBROOT
-                                ln -s $STORCON/etc$SERVERCODE/apache2 /etc/apache2
-                                ln -s $STORCON/etc$SERVERCODE/letsencrypt /etc/letsencrypt
-                        disp_good "$DATE - $SERVERCODE has been linked.\n" | tee -a $LOGFILE; sleep 3
-
-                fi
-                # Restart apache
-                disp_good "$DATE - Restarting Apache...\n" | tee -a $LOGFILE;
-                systemctl start apache2
-        else
-                disp_errr "$DATE - No existing $SERVERCODE servercode found in /storage.\n"; sleep 3
-        fi
+		# Check if html, apache2, letsencrypt is existing
+		if [[ -d $WEBROOT ]] || \
+		   [[ -d /etc/apache2 ]] || \
+		   [[ -d /etc/letsencrypt ]]; then
+			disp_noti "$DATE - Found entries, renaming html, apache2, letsencrypt...\n" \
+			| tee -a $LOGFILE;sleep 1
+				mv $WEBROOT $WEBROOT-$DATE
+	                        mv /etc/apache2 /etc/apache2-$DATE
+        	                mv /etc/letsencrypt /etc/letsencrypt-$DATE
+			disp_noti "$DATE - Linking this build to $SERVERCODE...\n" | tee -a $LOGFILE;
+				ln -s $STORPUB/www$SERVERCODE $WEBROOT
+        			ln -s $STORCON/etc$SERVERCODE/apache2 /etc/apache2
+                	        ln -s $STORCON/etc$SERVERCODE/letsencrypt /etc/letsencrypt
+			disp_good "$DATE - $SERVERCODE has been linked.\n" | tee -a $LOGFILE; sleep 3
+		else
+			disp_noti "$DATE - Linking this build to $SERVERCODE...\n" | tee -a $LOGFILE;
+	                	ln -s $STORPUB/www$SERVERCODE $WEBROOT
+				ln -s $STORCON/etc$SERVERCODE/apache2 /etc/apache2
+                		ln -s $STORCON/etc$SERVERCODE/letsencrypt /etc/letsencrypt
+			disp_good "$DATE - $SERVERCODE has been linked.\n" | tee -a $LOGFILE; sleep 3
+			
+		fi
+		# Restart apache
+		disp_good "$DATE - Restarting Apache...\n" | tee -a $LOGFILE;
+		systemctl start apache2
+	else
+		disp_errr "$DATE - No existing $SERVERCODE servercode found in /storage.\n"; sleep 3
+	fi
 exit 1
+}
+
+function exec_reporting(){
+	echo "Team, this is an audit report for the following provisioning:" > $TMPDIR/prov.tmp;
+	echo "" >> $TMPDIR/prov.tmp;
+	echo "`date`" >> $TMPDIR/prov.tmp;
+	echo "HOSTNAME: `hostname -f`" >> $TMPDIR/prov.tmp;
+	echo "SERIAL: `dmidecode -s system-serial-number`" >> $TMPDIR/prov.tmp;
+	echo "MANUFACTURER: `dmidecode -s system-manufacturer`" >> $TMPDIR/prov.tmp;
+	echo "PRODUCT: `dmidecode -s system-product-name`" >> $TMPDIR/prov.tmp;
+	echo "" >> $TMPDIR/prov.tmp;
+	
+	if [[ -f "/etc/lsb-release" ]]; then
+		echo "OPERATING SYSTEM:" >> $TMPDIR/prov.tmp;
+		echo "`cat /etc/lsb-release`" >> $TMPDIR/prov.tmp;
+      elif [[ -f "/etc/redhat-release" ]]; then
+		echo "OPERATING SYSTEM:" >> $TMPDIR/prov.tmp;
+	      	echo "`cat /etc/redhat-release`" >> $TMPDIR/prov.tmp;
+	else
+		echo "Unidentified OS." >> $TMPDIR/prov.tmp;
+	fi
+	
+	echo "" >> $TMPDIR/prov.tmp;
+	echo "UPTIME: `uptime`" >> $TMPDIR/prov.tmp;
+	echo "" >> $TMPDIR/prov.tmp;
+	echo "SHORT SUMMARY:" >> $TMPDIR/prov.tmp;
+	echo "`lshw -short`" >> $TMPDIR/prov.tmp;
+	echo "" >> $TMPDIR/prov.tmp;
+	echo "PROVISIONED BY: $FULLNAME - `date`" >> $TMPDIR/prov.tmp;
+
+	cat $TMPDIR/prov.tmp
+	cat $TMPDIR/prov.tmp | mail -s "ARPA - PAREF - $FULLNAME provisioned a server" $EMAIL;
 }
 
 function load_customization(){
@@ -417,10 +451,18 @@ function load_customization(){
         elif [[ "$BUILD" == "2" ]]; then
                 exec_newsrvr
                 process_build
+		exec_reporting
         elif [[ "$BUILD" == "3" ]]; then
-                exec_lnksrvr
+          	exec_lnksrvr
+	    	exec_reporting	
           fi
 }
+
+# Get fullname for the audit
+while [[ -z "$FULLNAME" ]]
+do	disp_good "Please enter your full name: "; read -r FULLNAME
+      [[ -z "$FULLNAME" ]] && disp_errr "You need to enter your full name to continue.\n"
+done
 
 # execute mainopt
 load_customization
