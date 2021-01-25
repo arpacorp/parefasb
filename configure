@@ -394,7 +394,6 @@ function exec_lnksrvr(){
 	else
 		disp_errr "$DATE - No existing $SERVERCODE servercode found in /storage.\n"; sleep 3
 	fi
-exit 1
 }
 
 function exec_reporting(){
