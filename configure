@@ -153,7 +153,11 @@ function load_misc(){
                 cp $TMPDIR/hosts $XHST
         disp_good "$DATE - /etc/hosts changes completed.\n" | tee -a $LOGFILE;
 
-        disp_stat "$DATE - Adding GFS connectivity...\n" | tee -a $LOGFILE; sleep 3
+        disp_stat "$DATE - Copying default php.ini...\n" | tee -a $LOGFILE; sleep 3
+        	cp $BASEPATH/php.ini.orig $PHPDIR/php.ini
+	disp_good "$DATE - php.ini completed.\n" | tee -a $LOGFILE;
+	
+	disp_stat "$DATE - Adding GFS connectivity...\n" | tee -a $LOGFILE; sleep 3
                 echo "LABEL=cloudimg-rootfs   /        ext4   defaults        0 0" > $XFST
                 echo "LABEL=UEFI      /boot/efi       vfat    defaults        0 0" >> $XFST
                 echo "glusterx:volgfs /storage glusterfs defaults,_netdev,backupvolfile-server=glustery 0 0" >> $XFST
